@@ -3,23 +3,10 @@ import Dragula from "react-dragula";
 
 export default function App() {
   const [taskText, setTaskText] = useState("");
-  const [toDoTasks, setToDoTasks] = useState([
-    "Order #1",
-    "Order #2",
-    "Order #3",
-    "Order #4"
-  ]);
-  const [doingTasks, setDoingTasks] = useState([
-    "Order 10",
-    "Order 15",
-    "Order 21",
-    "Order 25"
-  ]);
-  const [doneTasks, setDoneTasks] = useState(["Order 1000", "Order 500"]);
-  const [trashTasks, setTrashTasks] = useState([
-    "Order #2132",
-    "Order #222"
-  ]);
+  const [toDoTasks, setToDoTasks] = useState([]);
+  const [doingTasks, setDoingTasks] = useState([]);
+  const [doneTasks, setDoneTasks] = useState([]);
+  const [trashTasks, setTrashTasks] = useState([]);
 
   const toDoRef = useRef(null);
   const doingRef = useRef(null);
@@ -27,6 +14,8 @@ export default function App() {
   const trashRef = useRef(null);
 
   useEffect(() => {
+ 
+    fetchTasks();
 
     const drake = Dragula([toDoRef.current, doingRef.current, doneRef.current, trashRef.current]);
 
@@ -35,42 +24,79 @@ export default function App() {
       const sourceId = source.id;
 
       if (targetId !== sourceId) {
-        const taskText = el.innerText;
-        el.remove();
+        const taskId = el.dataset.taskId;
+        const newStatus = targetId === 'to-do' ? 'todo' : 
+                         targetId === 'doing' ? 'doing' :
+                         targetId === 'done' ? 'done' :
+                         'trash';
 
-        switch (targetId) {
-          case 'to-do':
-            setToDoTasks([...toDoTasks, taskText]);
-            break;
-          case 'doing':
-            setDoingTasks([...doingTasks, taskText]);
-            break;
-          case 'done':
-            setDoneTasks([...doneTasks, taskText]);
-            break;
-          case 'trash':
-            setTrashTasks([...trashTasks, taskText]);
-            break;
-          default:
-            break;
-        }
+
+        updateTaskStatus(taskId, newStatus);
       }
     });
 
     return () => {
       drake.destroy();
     };
-  }, [toDoTasks, doingTasks, doneTasks, trashTasks]);
+  }, []);
 
-  const addTask = () => {
-    if (taskText.trim() !== "") {
-      setToDoTasks([...toDoTasks, taskText]);
-      setTaskText("");
+  const fetchTasks = async () => {
+    try {
+      const response = await fetch('/api/tasks');
+      const data = await response.json();
+      setToDoTasks(data.filter(task => task.status === 'todo'));
+      setDoingTasks(data.filter(task => task.status === 'doing'));
+      setDoneTasks(data.filter(task => task.status === 'done'));
+      setTrashTasks(data.filter(task => task.status === 'trash'));
+    } catch (error) {
+      console.log(error);
     }
   };
 
-  const emptyTrash = () => {
-    setTrashTasks([]);
+  const addTask = async () => {
+    if (taskText.trim() !== "") {
+      try {
+        const response = await fetch('/api/tasks', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ text: taskText, status: 'todo' }),
+        });
+        const data = await response.json();
+        setToDoTasks([...toDoTasks, data]);
+        setTaskText("");
+      } catch (error) {
+        console.log(error);
+      }
+    }
+  };
+
+  const updateTaskStatus = async (taskId, newStatus) => {
+    try {
+      await fetch(`/api/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      fetchTasks();
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const emptyTrash = async () => {
+    try {
+      await fetch(`/api/tasks`, {
+        method: 'DELETE',
+      });
+      setTrashTasks([]);
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   return (
@@ -104,8 +130,8 @@ export default function App() {
             </div>
             <ul className="task-list" id="to-do" ref={toDoRef}>
               {toDoTasks.map((task, index) => (
-                <li key={index} className="task">
-                  <p>{task}</p>
+                <li key={task._id} className="task" data-task-id={task._id}>
+                  <p>{task.text}</p>
                 </li>
               ))}
             </ul>
@@ -117,8 +143,8 @@ export default function App() {
             </div>
             <ul className="task-list" id="doing" ref={doingRef}>
               {doingTasks.map((task, index) => (
-                <li key={index} className="task">
-                  <p>{task}</p>
+                <li key={task._id} className="task" data-task-id={task._id}>
+                  <p>{task.text}</p>
                 </li>
               ))}
             </ul>
@@ -130,8 +156,8 @@ export default function App() {
             </div>
             <ul className="task-list" id="done" ref={doneRef}>
               {doneTasks.map((task, index) => (
-                <li key={index} className="task">
-                  <p>{task}</p>
+                <li key={task._id} className="task" data-task-id={task._id}>
+                  <p>{task.text}</p>
                 </li>
               ))}
             </ul>
@@ -143,8 +169,8 @@ export default function App() {
             </div>
             <ul className="task-list" id="trash" ref={trashRef}>
               {trashTasks.map((task, index) => (
-                <li key={index} className="task">
-                  <p>{task}</p>
+                <li key={task._id} className="task" data-task-id={task._id}>
+                  <p>{task.text}</p>
                 </li>
               ))}
             </ul>
