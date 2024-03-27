@@ -14,8 +14,8 @@ export default function App() {
   const trashRef = useRef(null);
 
   useEffect(() => {
- 
     fetchTasks();
+    addDemoTasks();
 
     const drake = Dragula([toDoRef.current, doingRef.current, doneRef.current, trashRef.current]);
 
@@ -29,7 +29,6 @@ export default function App() {
                          targetId === 'doing' ? 'doing' :
                          targetId === 'done' ? 'done' :
                          'trash';
-
 
         updateTaskStatus(taskId, newStatus);
       }
@@ -97,6 +96,19 @@ export default function App() {
     } catch (error) {
       console.log(error);
     }
+  };
+
+  const addDemoTasks = () => {
+    const demoTasks = [
+      { _id: 1, text: "order 1", status: "todo" },
+      { _id: 2, text: "order 2", status: "doing" },
+      { _id: 3, text: "order 3", status: "done" },
+      { _id: 4, text: "order 4", status: "trash" }
+    ];
+    setToDoTasks(demoTasks.filter(task => task.status === 'todo'));
+    setDoingTasks(demoTasks.filter(task => task.status === 'doing'));
+    setDoneTasks(demoTasks.filter(task => task.status === 'done'));
+    setTrashTasks(demoTasks.filter(task => task.status === 'trash'));
   };
 
   return (
